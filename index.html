@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Book Clurb</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F4FF;--bg2:#E8EEFF;--surface:#fff;--border:#D0D8FF;
+  --ink:#1A1A3E;--muted:#6B6B99;--accent:#5B4FE8;--accent2:#FF6B9D;
+  --teal:#17B89A;--amber:#F5A623;
+  --vbg:#FFF0F5;--vborder:#FFB3CC;--vtext:#B82060;
+  --radius:10px;--radius-lg:14px;
+  --display:'Playfair Display',serif;
+  --body:'DM Sans',sans-serif;
+}
+body{background:var(--bg);font-family:var(--body);color:var(--ink);min-height:100vh}
+
+/* Loading screen */
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:16px}
+#loading-screen.hidden{display:none}
+#loading-screen p{font-size:14px;color:var(--muted);font-family:var(--body)}
+.big-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+
+/* Setup screen — shown only on very first ever visit */
+header{background:linear-gradient(135deg,#5B4FE8 0%,#8B5CF6 50%,#EC4899 100%)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;gap:12px;max-width:960px;margin:0 auto}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo-wrap{width:72px;height:72px;flex-shrink:0}
+.logo-wrap svg{width:100%;height:100%}
+.header-title h1{font-family:var(--display);color:#fff;font-size:24px;font-weight:900;font-style:italic;line-height:1.1}
+.tagline{font-size:11px;color:rgba(255,255,255,.85);font-style:italic;margin-top:2px}
+#leader-btn{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-family:var(--body);font-weight:600;transition:all .2s}
+#leader-btn:hover{background:rgba(255,255,255,.35)}
+#leader-badge{background:#FFD700;color:#3B2A00;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:none}
+.sync-indicator{font-size:11px;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:5px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4)}
+.sync-dot.ok{background:#4ADE80}
+.sync-dot.syncing{background:#FCD34D;animation:pulse 1s infinite}
+.sync-dot.err{background:#F87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+nav{background:var(--surface);border-bottom:2px solid var(--border);display:flex;overflow-x:auto;position:sticky;top:0;z-index:50}
+.nav-inner{display:flex;max-width:960px;margin:0 auto;width:100%}
+nav button{background:none;border:none;padding:11px 16px;cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent)}
+nav button:hover{color:var(--accent)}
+main{max-width:960px;margin:0 auto;padding:20px 16px}
+section{display:none}
+section.visible{display:block}
+h2{font-family:var(--display);font-size:22px;color:var(--ink);font-weight:700;margin-bottom:2px;font-style:italic}
+.sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:15px 18px;margin-bottom:12px}
+.book-row{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:13px 16px;margin-bottom:9px;transition:border-color .15s}
+.book-row:hover{border-color:var(--accent)}
+.book-row.vetoed{background:var(--vbg);border-color:var(--vborder)}
+.bt{font-family:var(--display);font-size:15px;color:var(--ink);font-weight:700;line-height:1.3}
+.bt.clickable{cursor:pointer;color:var(--accent);text-decoration:underline;text-decoration-style:dotted}
+.ba{font-size:12px;color:var(--muted)}
+.bg{font-size:11px;color:var(--teal);font-weight:600;margin-top:2px}
+.bdesc{font-size:12px;color:var(--ink);margin-top:8px;line-height:1.6;border-left:3px solid var(--accent);padding-left:9px;opacity:.85}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600}
+.pill-reading{background:#EDE9FF;color:#5B4FE8}
+.veto-pill{background:var(--vbg);color:var(--vtext);border:1px solid var(--vborder);padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600}
+input,textarea,select{width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--body);font-size:13px;background:#FAFBFF;color:var(--ink);margin-bottom:8px;font-weight:500}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent);background:#fff}
+textarea{resize:vertical;min-height:65px}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600}
+.btn{background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:#4840C0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:6px}
+.btn-pink{background:var(--accent2)}.btn-pink:hover{background:#E0537F}
+.btn-teal{background:var(--teal)}.btn-teal:hover{background:#0E8F78}
+.btn-outline{background:transparent;color:var(--accent);border:1.5px solid var(--border)}.btn-outline:hover{background:var(--bg2)}
+.btn-danger{background:#E24B4A;color:#fff}.btn-danger:hover{background:#B83535}
+.btn-veto{background:var(--vbg);color:var(--vtext);border:1.5px solid var(--vborder)}.btn-veto:hover{background:#FFD6E8}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.hero{background:linear-gradient(135deg,#5B4FE8,#8B5CF6);border-radius:var(--radius-lg);padding:22px;color:#fff;margin-bottom:22px;display:flex;gap:18px;align-items:center}
+.spine{width:48px;height:66px;border-radius:4px 8px 8px 4px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero-label{font-size:10px;color:rgba(255,255,255,.8);letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:3px}
+.hero-title{font-family:var(--display);font-size:20px;color:#fff;font-weight:900;font-style:italic}
+.hero-author{font-size:12px;color:rgba(255,255,255,.8);margin-top:2px}
+.star-btn{background:none;border:1.5px solid var(--border);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s;font-weight:600}
+.star-btn.active,.star-btn:hover{background:var(--amber);color:#3B2A00;border-color:var(--amber)}
+.rating-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.vbar-wrap{background:var(--bg2);border-radius:6px;height:7px;margin-top:5px;overflow:hidden}
+.vbar{height:100%;background:var(--accent);border-radius:6px;transition:width .4s}
+.avg-score{font-family:var(--display);font-size:20px;color:var(--accent);font-weight:700}
+.rc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:14px 0}
+.rc{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);padding:14px;text-align:center;cursor:pointer;transition:all .2s}
+.rc:hover{border-color:var(--accent);transform:translateY(-2px)}
+.rc.voted{border-color:var(--accent);background:#F5F3FF}
+.rc.vetoed-pick{border-color:var(--vborder);background:var(--vbg)}
+.rc-num{font-size:26px;color:var(--bg2)}
+.rc-title{font-family:var(--display);font-size:13px;color:var(--ink);margin-top:7px;font-weight:700;font-style:italic}
+.rc-author{font-size:11px;color:var(--muted)}
+.rc-votes{margin-top:7px;font-size:11px;color:var(--accent);font-weight:600}
+.qitem{padding:10px 0;border-bottom:1px solid var(--border)}
+.qitem:last-child{border:none}
+.qnum{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.qtext{font-family:var(--display);font-size:15px;color:var(--ink);margin-top:4px;font-style:italic;line-height:1.4}
+.flex-b{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.veto-info-bar{background:var(--vbg);border:1.5px solid var(--vborder);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--vtext);margin-bottom:12px;font-weight:600}
+.filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filter-row select,.filter-row input{margin-bottom:0}
+.filter-row select{width:auto;font-size:12px;padding:7px 10px}
+.filter-row input{flex:1;min-width:130px}
+.upload-area{border:2px dashed var(--border);border-radius:10px;padding:22px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:10px}
+.upload-area:hover{border-color:var(--accent)}
+.upload-area input[type=file]{display:none}
+.upload-area p{font-size:13px;color:var(--muted);margin-top:6px}
+.comment-display{background:var(--bg2);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--ink);margin-top:5px;font-style:italic;font-family:var(--display)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;font-weight:600}
+.toast.show{opacity:1}
+.toast.error{background:#E24B4A}
+.empty{text-align:center;padding:30px;color:var(--muted);font-size:13px;font-weight:500}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,62,.65);align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--surface);border-radius:var(--radius-lg);padding:24px 28px;max-width:420px;width:100%;border:2px solid var(--border);max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--display);font-size:19px;color:var(--ink);font-weight:700;margin-bottom:4px;font-style:italic}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.err{color:#E24B4A;font-size:11px;margin-top:3px;font-weight:600}
+.count-badge{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:2px 9px;font-size:11px;color:var(--muted);margin-left:5px;font-weight:600}
+@media(max-width:600px){
+  .header-inner{padding:10px 12px}
+  .logo-wrap{width:52px;height:52px}
+  .header-title h1{font-size:18px}
+  main{padding:14px 10px}
+  .modal-box{padding:18px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-screen">
+  <div class="big-spinner"></div>
+  <p id="loading-msg">Loading The Book Clurb…</p>
+</div>
+
+
+
+<!-- App -->
+<div id="main-app" style="display:none">
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="logo-wrap">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="38" fill="rgba(255,255,255,0.15)"/>
+          <ellipse cx="22" cy="30" rx="9" ry="10" fill="#C084FC"/><ellipse cx="22" cy="38" rx="7" ry="5" fill="#A855F7"/>
+          <circle cx="22" cy="27" r="6" fill="#C084FC"/>
+          <ellipse cx="20" cy="26" rx="1.5" ry="1.5" fill="#1A1A3E"/><ellipse cx="24" cy="26" rx="1.5" ry="1.5" fill="#1A1A3E"/>
+          <path d="M20 29 Q22 30.5 24 29" fill="none" stroke="#7E22CE" stroke-width="0.8"/>
+          <rect x="18" y="25.5" width="3" height="1" rx="0.5" fill="#FFD700"/><rect x="22.5" y="25.5" width="3" height="1" rx="0.5" fill="#FFD700"/><line x1="21" y1="25.5" x2="22.5" y2="25.5" stroke="#FFD700" stroke-width="0.6"/>
+          <path d="M17 22 L14 19 L17 21" fill="#A855F7"/><path d="M27 22 L30 19 L27 21" fill="#A855F7"/>
+          <rect x="16" y="35" width="12" height="8" rx="1" fill="#FDE68A"/><rect x="16" y="35" width="6" height="8" rx="1" fill="#FCD34D"/><line x1="22" y1="35" x2="22" y2="43" stroke="#D97706" stroke-width="0.7"/>
+          <ellipse cx="58" cy="30" rx="9" ry="10" fill="#F9A8D4"/><ellipse cx="58" cy="38" rx="7" ry="5" fill="#F472B6"/>
+          <circle cx="58" cy="27" r="6" fill="#F9A8D4"/>
+          <ellipse cx="56" cy="26" rx="1.5" ry="1.5" fill="#1A1A3E"/><ellipse cx="60" cy="26" rx="1.5" ry="1.5" fill="#1A1A3E"/>
+          <circle cx="56" cy="25.7" r=".5" fill="#fff"/><circle cx="60" cy="25.7" r=".5" fill="#fff"/>
+          <path d="M56 29.5 Q58 31.5 60 29.5" fill="none" stroke="#BE185D" stroke-width="0.9"/>
+          <path d="M53 22 L51 19 L54 21.5" fill="#F472B6"/><path d="M63 22 L65 19 L62 21.5" fill="#F472B6"/>
+          <ellipse cx="54" cy="27" rx=".8" ry=".6" fill="#FF6B9D" opacity=".6"/><ellipse cx="62" cy="27" rx=".8" ry=".6" fill="#FF6B9D" opacity=".6"/>
+          <rect x="52" y="33" width="12" height="9" rx="1" fill="#BAE6FD"/><rect x="52" y="33" width="6" height="9" rx="1" fill="#7DD3FC"/><line x1="58" y1="33" x2="58" y2="42" stroke="#0EA5E9" stroke-width="0.7"/>
+          <ellipse cx="22" cy="58" rx="9" ry="8" fill="#5EEAD4"/><circle cx="22" cy="51" r="6" fill="#5EEAD4"/><ellipse cx="22" cy="57" rx="11" ry="5" fill="#2DD4BF"/>
+          <ellipse cx="20" cy="50" rx="1.5" ry="1.5" fill="#1A1A3E"/><ellipse cx="24" cy="50" rx="1.5" ry="1.5" fill="#1A1A3E"/>
+          <path d="M20 53 Q22 54 24 53" fill="none" stroke="#0D9488" stroke-width="0.8"/>
+          <path d="M17 47 L14 44 L17 46" fill="#2DD4BF"/><path d="M27 47 L30 44 L27 46" fill="#2DD4BF"/>
+          <rect x="13" y="57" width="18" height="7" rx="2" fill="#FDE68A"/><rect x="13" y="57" width="9" height="7" rx="2" fill="#FCD34D"/><line x1="22" y1="57" x2="22" y2="64" stroke="#D97706" stroke-width="0.7"/>
+          <ellipse cx="58" cy="56" rx="9" ry="10" fill="#FCD34D"/><ellipse cx="58" cy="64" rx="7" ry="5" fill="#F59E0B"/>
+          <circle cx="58" cy="53" r="6" fill="#FCD34D"/>
+          <ellipse cx="56" cy="52" rx="1.5" ry="1.3" fill="#1A1A3E"/><ellipse cx="60" cy="52" rx="1.5" ry="1.3" fill="#1A1A3E"/>
+          <path d="M54.5 51.5 L57.5 52.2" stroke="#92400E" stroke-width=".8"/><path d="M61.5 51.5 L58.5 52.2" stroke="#92400E" stroke-width=".8"/>
+          <path d="M56 55 Q58 54 60 55" fill="none" stroke="#92400E" stroke-width="0.9"/>
+          <path d="M53 49 L50 46 L53 48" fill="#F59E0B"/><path d="M63 49 L66 46 L63 48" fill="#F59E0B"/>
+          <rect x="52" y="60" width="12" height="8" rx="1" fill="#BBDBE8"/><rect x="52" y="60" width="6" height="8" rx="1" fill="#93C5D7"/><line x1="58" y1="60" x2="58" y2="68" stroke="#0369A1" stroke-width="0.7"/>
+          <circle cx="40" cy="15" r="1.2" fill="#FFD700"/><circle cx="40" cy="65" r="1.2" fill="#FFD700"/><circle cx="15" cy="40" r="1.2" fill="#FFD700"/><circle cx="65" cy="40" r="1.2" fill="#FFD700"/>
+        </svg>
+      </div>
+      <div class="header-title">
+        <h1>The Book Clurb</h1>
+        <div class="tagline">we read together. we suffer together. it's fine.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">–</span></div>
+      <span id="leader-badge"><i class="ti ti-crown" style="font-size:11px;margin-right:3px"></i>Leader</span>
+      <button id="leader-btn" onclick="toggleLeader()">Leader login</button>
+    </div>
+  </div>
+</header>
+<nav>
+  <div class="nav-inner">
+    <button class="active" onclick="showTab('home',this)"><i class="ti ti-home" style="font-size:13px;margin-right:4px"></i>Home</button>
+    <button onclick="showTab('pile',this)"><i class="ti ti-stack" style="font-size:13px;margin-right:4px"></i>To Read</button>
+    <button onclick="showTab('ratings',this)"><i class="ti ti-star" style="font-size:13px;margin-right:4px"></i>Ratings</button>
+    <button onclick="showTab('questions',this)"><i class="ti ti-help" style="font-size:13px;margin-right:4px"></i>Questions</button>
+    <button onclick="showTab('picker',this)"><i class="ti ti-dice" style="font-size:13px;margin-right:4px"></i>Next pick</button>
+    <button onclick="showTab('unhinged',this)"><i class="ti ti-mood-crazy-happy" style="font-size:13px;margin-right:4px"></i>UnHinGeD</button>
+  </div>
+</nav>
+<main>
+  <section id="tab-home" class="visible">
+    <div id="hero-area"></div>
+    <div class="flex-b" style="margin-bottom:10px"><div><h2>Finished books</h2><p class="sub">Click any title to expand the summary</p></div></div>
+    <div id="finished-list"></div>
+  </section>
+  <section id="tab-pile">
+    <div class="flex-b" style="margin-bottom:8px"><div><h2>To Read <span id="pile-count" class="count-badge"></span></h2><p class="sub">Our current reading pile</p></div></div>
+    <div class="veto-info-bar"><i class="ti ti-ban" style="margin-right:5px"></i>Each member gets 3 vetoes per year. Vetoed books show in red and trigger a reroll if picked randomly.</div>
+    <div class="filter-row">
+      <input type="text" id="search-input" placeholder="Search by title or author…" oninput="renderPile()"/>
+      <select id="genre-filter" onchange="renderPile()"></select>
+      <select id="veto-filter" onchange="renderPile()"><option value="">All books</option><option value="vetoed">Vetoed only</option><option value="clean">No vetoes</option></select>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <p style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px"><i class="ti ti-plus" style="margin-right:5px"></i>Add a book to the pile</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><label>Title</label><input type="text" id="add-title" placeholder="Book title" onkeydown="if(event.key==='Enter')searchBook()"/></div>
+        <div style="flex:1;min-width:150px"><label>Author</label><input type="text" id="add-author" placeholder="Author name" onkeydown="if(event.key==='Enter')searchBook()"/></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-teal" onclick="searchBook()" id="search-btn"><i class="ti ti-search"></i>Search for book</button>
+        <span id="lookup-status" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div id="lookup-result" style="display:none;margin-top:12px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div>
+            <div id="found-title" style="font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);font-style:italic"></div>
+            <div id="found-author" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+            <div id="found-genre" style="font-size:11px;color:var(--teal);font-weight:600;margin-top:3px"></div>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="clearSearch()" style="flex-shrink:0"><i class="ti ti-x"></i>Clear</button>
+        </div>
+        <div id="found-desc" style="font-size:12px;color:var(--ink);line-height:1.6;border-left:3px solid var(--accent);padding-left:9px;margin-bottom:12px"></div>
+        <button class="btn btn-sm btn-pink" onclick="addBook()"><i class="ti ti-plus"></i>Add to pile</button>
+      </div>
+    </div>
+    <div id="pile-list"></div>
+  </section>
+  <section id="tab-ratings">
+    <h2>Ratings</h2><p class="sub">Rate the current book — view final scores for finished books</p>
+    <div id="ratings-list"></div>
+  </section>
+  <section id="tab-questions">
+    <h2>Questions</h2><p class="sub">Discussion questions for our next meeting</p>
+    <div id="leader-q-area" style="display:none">
+      <div class="card" style="margin-bottom:12px">
+        <p style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:12px"><i class="ti ti-upload" style="margin-right:5px"></i>Upload a questions file</p>
+        <div class="upload-area" onclick="document.getElementById('q-file-input').click()">
+          <i class="ti ti-file-text" style="font-size:30px;color:var(--accent)"></i>
+          <p>Click to upload a .txt or .csv file — one question per line</p>
+          <input type="file" id="q-file-input" accept=".txt,.csv,.md" onchange="handleFileUpload(event)"/>
+        </div>
+        <p style="font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 7px">Or type manually</p>
+        <textarea id="new-q" placeholder="e.g. Which character did you relate to most?"></textarea>
+        <button class="btn btn-sm" onclick="addQuestion()"><i class="ti ti-plus"></i>Add question</button>
+      </div>
+    </div>
+    <div id="questions-list"></div>
+  </section>
+  <section id="tab-picker">
+    <h2>Next pick generator</h2><p class="sub">Draw 3 random books — vetoed books trigger a reroll</p>
+    <div id="picker-area"></div>
+  </section>
+  <section id="tab-unhinged">
+    <div style="text-align:center;margin-bottom:6px">
+      <h2 style="font-size:26px;background:linear-gradient(135deg,#5B4FE8,#EC4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">UnHinGeD</h2>
+      <p class="sub">Books not on your list that you might actually like. Pull the lever. Find out.</p>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+        <div style="flex:1;min-width:180px">
+          <label>Genre / vibe</label>
+          <select id="unhinged-genre" style="margin-bottom:0">
+            <option value="">Pick a genre…</option>
+            <option value="True Crime">True Crime</option>
+            <option value="Literary Fiction">Literary Fiction</option>
+            <option value="Thriller & Suspense">Thriller &amp; Suspense</option>
+            <option value="Horror">Horror</option>
+            <option value="Science Fiction">Science Fiction</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="Romance">Romance</option>
+            <option value="Historical Fiction">Historical Fiction</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Memoir & Biography">Memoir &amp; Biography</option>
+            <option value="Humor & Comedy">Humor &amp; Comedy</option>
+            <option value="Nonfiction">Nonfiction</option>
+            <option value="Graphic Novel">Graphic Novel</option>
+            <option value="Magical Realism">Magical Realism</option>
+            <option value="Dark Academia">Dark Academia</option>
+            <option value="Cozy Mystery">Cozy Mystery</option>
+            <option value="Dystopian">Dystopian</option>
+            <option value="Psychological Thriller">Psychological Thriller</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div id="lever-timer" style="font-size:11px;color:var(--muted);font-weight:600;min-height:16px;text-align:center"></div>
+          <button id="lever-btn" onclick="pullLever()" style="background:linear-gradient(135deg,#5B4FE8,#EC4899);border:none;color:#fff;font-family:var(--display);font-size:15px;font-weight:700;font-style:italic;padding:12px 28px;border-radius:40px;cursor:pointer;transition:transform .15s;letter-spacing:.5px" onmousedown="this.style.transform='scale(0.94)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'">
+            <i class="ti ti-slot-machine" style="font-size:16px;margin-right:6px"></i>Pull the lever!
+          </button>
+          <div id="spin-count-display" style="font-size:10px;color:var(--muted)"></div>
+        </div>
+      </div>
+      <div id="lever-message" style="display:none;text-align:center;padding:10px 0;font-family:var(--display);font-size:15px;font-style:italic;color:var(--accent2)"></div>
+    </div>
+    <div id="unhinged-results"></div>
+  </section>
+</main>
+</div>
+
+<!-- Modals -->
+<div id="pw-modal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-lock" style="margin-right:5px;color:var(--accent)"></i>Leader login</div>
+    <div class="modal-sub">Enter the password to unlock leader controls.</div>
+    <label>Password</label>
+    <input type="password" id="pw-input" onkeydown="if(event.key==='Enter')checkPw()" placeholder="Password"/>
+    <div id="pw-err" class="err"></div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-sm" onclick="checkPw()">Unlock</button>
+      <button class="btn btn-sm btn-outline" onclick="closePw()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="veto-modal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title" style="color:var(--vtext)"><i class="ti ti-ban" style="margin-right:5px"></i>Cast a veto</div>
+    <div class="modal-sub">You have 3 vetoes per year. Vetoed books show in red and trigger a reroll.</div>
+    <p id="veto-book-name" style="font-family:var(--display);font-weight:700;font-size:14px;margin-bottom:10px;font-style:italic"></p>
+    <label>Your name</label>
+    <input type="text" id="veto-name-input" placeholder="Enter your name"/>
+    <div id="veto-err" class="err"></div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-sm btn-veto" onclick="confirmVeto()"><i class="ti ti-ban"></i>Use a veto</button>
+      <button class="btn btn-sm btn-outline" onclick="closeVeto()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="rate-modal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-star" style="margin-right:5px;color:var(--amber)"></i>Rate this book</div>
+    <p id="rate-book-name" style="font-family:var(--display);font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px;font-style:italic"></p>
+    <div class="modal-sub" id="rate-modal-sub"></div>
+    <label>Your name</label>
+    <input type="text" id="rate-name-input" placeholder="Your name"/>
+    <label>Rating (1–10)</label>
+    <div class="rating-row" id="rate-modal-stars" style="margin-bottom:12px"></div>
+    <label>Anything you want to say? (optional)</label>
+    <textarea id="rate-comment" placeholder="Share your thoughts…" rows="3"></textarea>
+    <div id="rate-err" class="err" style="margin-bottom:8px"></div>
+    <div class="btn-row">
+      <button class="btn btn-sm" onclick="submitRating()">Submit rating</button>
+      <button class="btn btn-sm btn-outline" onclick="closeRate()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="change-book-modal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-book" style="margin-right:5px;color:var(--accent)"></i>Change current book</div>
+    <div class="modal-sub">Selecting a new book archives the current book's ratings as final.</div>
+    <label>Pick from the pile</label>
+    <select id="change-book-select" style="margin-bottom:12px"></select>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-pink" onclick="confirmChangeBook()">Set as current read</button>
+      <button class="btn btn-sm btn-outline" onclick="document.getElementById('change-book-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const PW = 'cookies';
+const YEAR = new Date().getFullYear();
+// ── JSONBLOB BACKEND (zero signup, auto-creates) ──────────────────────────────
+const BLOB_BASE = 'https://jsonblob.com/api/jsonBlob';
+let BLOB_ID = '';
+let S = {};
+let saveTimer = null;
+let isSaving = false;
+
+function setSyncStatus(st) {
+  const d=document.getElementById('sync-dot'), l=document.getElementById('sync-label');
+  if(!d)return; d.className='sync-dot '+st;
+  l.textContent=st==='ok'?'synced':st==='syncing'?'saving…':'offline';
+}
+
+async function blobRead(id) {
+  const r = await fetch(BLOB_BASE+'/'+id, {headers:{'Accept':'application/json'}});
+  if(!r.ok) throw new Error('read failed '+r.status);
+  return r.json();
+}
+
+async function blobWrite(id, data) {
+  const r = await fetch(BLOB_BASE+'/'+id, {method:'PUT', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(data)});
+  if(!r.ok) throw new Error('write failed '+r.status);
+}
+
+async function blobCreate(data) {
+  const r = await fetch(BLOB_BASE, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(data)});
+  if(!r.ok) throw new Error('create failed '+r.status);
+  // ID is in the Location header
+  const loc = r.headers.get('Location') || '';
+  const id = loc.split('/').pop();
+  if(!id) throw new Error('no ID in response');
+  return id;
+}
+
+async function pullLatest() {
+  try { S=await blobRead(BLOB_ID); populateGenreFilter(); render(); setSyncStatus('ok'); }
+  catch(e){ setSyncStatus('err'); }
+}
+
+async function save() {
+  if(isSaving)return; isSaving=true; setSyncStatus('syncing');
+  try { await blobWrite(BLOB_ID, S); setSyncStatus('ok'); }
+  catch(e){ setSyncStatus('err'); toast('Save failed — check connection',true); }
+  isSaving=false;
+}
+function ds(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,800); }
+
+window.addEventListener('load', async () => {
+  BLOB_ID = '019efb11-d685-717e-864a-6610c152a3ce';
+  document.getElementById('loading-msg').textContent = 'Syncing with the club…';
+  try {
+    const data = await blobRead(BLOB_ID);
+    // If blob is empty {}, initialize with seed data
+    if(!data.books || data.books.length === 0) {
+      S = JSON.parse(JSON.stringify(SEED));
+      await blobWrite(BLOB_ID, S);
+    } else {
+      S = data;
+    }
+    launchApp();
+  } catch(e) {
+    document.getElementById('loading-msg').textContent = 'Connection failed — please refresh.';
+    console.error(e);
+  }
+});
+
+function launchApp() {
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('main-app').style.display='block';
+  setSyncStatus('ok');
+  populateGenreFilter(); render();
+  setInterval(pullLatest, 20000);
+}
+
+// ── APP ────────────────────────────────────────────────────
+function populateGenreFilter(){
+  const sel=document.getElementById('genre-filter');if(!sel)return;
+  const g=new Set();(S.books||[]).filter(b=>b.status==='pile').forEach(b=>{if(b.genre)b.genre.split('/').forEach(x=>g.add(x.trim()));});
+  sel.innerHTML='<option value="">All genres</option>'+[...g].sort().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+}
+function showTab(id,btn){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('visible'));
+  document.querySelectorAll('.nav-inner button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('visible'); btn.classList.add('active'); render();
+  if(id==='unhinged') initLeverState();
+}
+let isLeader=false;
+function toggleLeader(){if(isLeader){isLeader=false;render();return;}document.getElementById('pw-modal').classList.add('open');setTimeout(()=>document.getElementById('pw-input').focus(),50);}
+function closePw(){document.getElementById('pw-modal').classList.remove('open');document.getElementById('pw-input').value='';document.getElementById('pw-err').textContent='';}
+function checkPw(){if(document.getElementById('pw-input').value===PW){isLeader=true;closePw();render();toast('Leader mode unlocked!');}else{document.getElementById('pw-err').textContent='Wrong password.';}}
+function render(){
+  document.getElementById('leader-btn').textContent=isLeader?'Sign out':'Leader login';
+  document.getElementById('leader-badge').style.display=isLeader?'inline-block':'none';
+  renderHome();renderPile();renderRatings();renderQuestions();renderPicker();
+}
+function toggleExpand(id){S.expandedBooks=S.expandedBooks||{};S.expandedBooks[id]=!S.expandedBooks[id];renderHome();}
+function renderHome(){
+  const rd=(S.books||[]).find(b=>b.status==='reading');
+  const ha=document.getElementById('hero-area');
+  if(rd){ha.innerHTML=`<div class="hero"><div class="spine"><i class="ti ti-book" style="font-size:22px;color:#fff"></i></div><div style="flex:1"><div class="hero-label">Currently reading</div><div class="hero-title">${esc(rd.title)}</div><div class="hero-author">${esc(rd.author)}${rd.genre?' &middot; '+esc(rd.genre.split('/')[0].trim()):''}</div>${rd.desc?`<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:7px;line-height:1.5">${esc(rd.desc)}</div>`:''}<div class="btn-row" style="margin-top:11px">${isLeader?`<button class="btn btn-sm" style="background:rgba(255,255,255,.25);border:none" onclick="markFinished(${rd.id})">Mark as finished</button><button class="btn btn-sm" style="background:rgba(255,255,255,.25);border:none" onclick="openChangeBook()">Change current book</button>`:'<span style="font-size:11px;color:rgba(255,255,255,.7)">Happy reading!</span>'}</div></div></div>`;}
+  else{ha.innerHTML=`<div class="card" style="text-align:center;padding:26px;margin-bottom:18px"><i class="ti ti-books" style="font-size:30px;color:var(--border)"></i><p style="margin-top:9px;color:var(--muted);font-size:13px">No book currently being read — use the Next Pick tab!</p></div>`;}
+  const fin=(S.books||[]).filter(b=>b.status==='read');
+  document.getElementById('finished-list').innerHTML=fin.length===0?`<div class="empty">No finished books yet.</div>`:fin.map(b=>`<div class="book-row"><div class="flex-b"><div><div class="bt clickable" onclick="toggleExpand(${b.id})">${esc(b.title)} <i class="ti ti-chevron-${(S.expandedBooks||{})[b.id]?'up':'down'}" style="font-size:11px"></i></div><div class="ba">${esc(b.author)}</div></div>${b.groupRating!=null?`<div style="text-align:right"><div class="avg-score">${b.groupRating}<span style="font-size:11px;color:var(--muted)">/10</span></div><div style="font-size:10px;color:var(--muted)">group rating</div></div>`:''}</div>${(S.expandedBooks||{})[b.id]&&b.desc?`<div class="bdesc">${esc(b.desc)}</div>`:''}</div>`).join('');
+}
+function renderPile(){
+  const srch=(document.getElementById('search-input')||{value:''}).value.toLowerCase();
+  const gf=(document.getElementById('genre-filter')||{value:''}).value;
+  const vf=(document.getElementById('veto-filter')||{value:''}).value;
+  let pile=(S.books||[]).filter(b=>b.status==='pile');
+  if(srch)pile=pile.filter(b=>b.title.toLowerCase().includes(srch)||b.author.toLowerCase().includes(srch));
+  if(gf)pile=pile.filter(b=>b.genre&&b.genre.includes(gf));
+  if(vf==='vetoed')pile=pile.filter(b=>b.vetoes&&b.vetoes.length>0);
+  if(vf==='clean')pile=pile.filter(b=>!b.vetoes||b.vetoes.length===0);
+  document.getElementById('pile-count').textContent=(S.books||[]).filter(b=>b.status==='pile').length;
+  const rdg=(S.books||[]).find(b=>b.status==='reading');
+  document.getElementById('pile-list').innerHTML=pile.length===0?`<div class="empty">No books match your filters.</div>`:pile.map(b=>{const hv=b.vetoes&&b.vetoes.length>0;const im=(S.ratings||{})['veto_my_'+b.id];return`<div class="book-row ${hv?'vetoed':''}"><div class="flex-b" style="gap:8px"><div style="flex:1;min-width:0"><div class="bt">${esc(b.title)} ${b.year?`<span style="font-weight:400;font-size:11px;color:var(--muted)">${b.year}</span>`:''}</div><div class="ba">${esc(b.author)}</div>${b.genre?`<div class="bg">${esc(b.genre.split('/').slice(0,2).join(' / '))}</div>`:''}${b.desc?`<div class="bdesc">${esc(b.desc)}</div>`:''}${hv?`<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${b.vetoes.map(v=>`<span class="veto-pill"><i class="ti ti-ban" style="font-size:10px;margin-right:2px"></i>Vetoed by ${esc(v)}</span>`).join('')}</div>`:''}</div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">${!im?`<button class="btn btn-sm btn-veto" onclick="openVetoModal(${b.id})"><i class="ti ti-ban"></i>Veto</button>`:`<button class="btn btn-sm btn-veto" onclick="undoVeto(${b.id})"><i class="ti ti-x"></i>Undo veto</button>`}${isLeader&&!rdg?`<button class="btn btn-sm btn-teal" onclick="startReading(${b.id})">Read now</button>`:''}${isLeader?`<button class="btn btn-sm btn-danger" onclick="removeBook(${b.id})"><i class="ti ti-trash"></i></button>`:''}</div></div></div>`;}).join('');
+}
+function renderRatings(){
+  const rd=(S.books||[]).find(b=>b.status==='reading');let h='';
+  if(rd){const ar=(S.ratings||{})[rd.id]||[];const mr=(S.ratings||{})['members_'+rd.id]||{};const avg=ar.length?(ar.reduce((a,c)=>a+c,0)/ar.length).toFixed(1):null;
+    h+=`<div class="card" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><div class="bt" style="color:var(--accent)">${esc(rd.title)}</div><div class="ba">${esc(rd.author)}</div><span class="pill pill-reading" style="margin-top:4px;display:inline-block">Currently reading</span></div>${avg?`<div style="text-align:right"><div class="avg-score">${avg}<span style="font-size:11px;color:var(--muted)">/10</span></div><div style="font-size:10px;color:var(--muted)">${ar.length} rating${ar.length!==1?'s':''}</div></div>`:''}</div><div class="vbar-wrap"><div class="vbar" style="width:${avg?parseFloat(avg)*10:0}%"></div></div><div class="btn-row" style="margin-top:11px"><button class="btn btn-sm btn-pink" onclick="openRateModal(${rd.id},false)"><i class="ti ti-star"></i>Submit my rating</button>${isLeader?`<button class="btn btn-sm btn-outline" onclick="openRateModal(${rd.id},true)"><i class="ti ti-user"></i>Submit for another member</button>`:''}</div>${Object.keys(mr).length>0?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:7px">Member ratings</div>${Object.entries(mr).map(([n,d])=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)"><div class="flex-b"><span style="font-size:13px;font-weight:600">${esc(n)}</span><span class="avg-score" style="font-size:16px">${d.score}<span style="font-size:10px;color:var(--muted)">/10</span></span></div>${d.comment?`<div class="comment-display">${esc(d.comment)}</div>`:''}</div>`).join('')}</div>`:''}</div>`;}
+  const fin=(S.books||[]).filter(b=>b.status==='read');
+  if(fin.length>0){h+=`<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;margin-top:4px">Finished books</div>`;h+=fin.map(b=>{const gr=b.groupRating;const mr=(S.ratings||{})['members_'+b.id]||{};return`<div class="card" style="margin-bottom:9px"><details><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center"><div><div class="bt">${esc(b.title)}</div><div class="ba">${esc(b.author)}</div></div>${gr!=null?`<div style="text-align:right"><div class="avg-score">${gr}<span style="font-size:11px;color:var(--muted)">/10</span></div><div style="font-size:10px;color:var(--muted)">final</div></div>`:'<span style="font-size:11px;color:var(--muted)">No rating</span>'}</summary><div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">${b.desc?`<div class="bdesc" style="margin-bottom:10px">${esc(b.desc)}</div>`:''}${Object.keys(mr).length>0?Object.entries(mr).map(([n,d])=>`<div style="padding:5px 0;border-bottom:1px solid var(--border)"><div class="flex-b"><span style="font-size:12px;font-weight:600">${esc(n)}</span><span style="font-size:14px;font-weight:700;color:var(--accent)">${d.score}<span style="font-size:10px;color:var(--muted)">/10</span></span></div>${d.comment?`<div class="comment-display">${esc(d.comment)}</div>`:''}</div>`).join(''):`<p style="font-size:12px;color:var(--muted);font-style:italic">No individual ratings recorded.</p>`}</div></details></div>`;}).join('');}
+  document.getElementById('ratings-list').innerHTML=h||`<div class="empty">No books to rate yet.</div>`;
+}
+function renderQuestions(){
+  const qa=document.getElementById('leader-q-area');if(qa)qa.style.display=isLeader?'block':'none';
+  document.getElementById('questions-list').innerHTML=(S.questions||[]).length===0?`<div class="empty">No questions yet — the leader will add them before the meeting.</div>`:
+    `<div class="card">${(S.questions||[]).map((q,i)=>`<div class="qitem"><div class="flex-b"><span class="qnum">Question ${i+1}</span>${isLeader?`<button class="btn btn-sm btn-danger" onclick="removeQ(${q.id})"><i class="ti ti-trash"></i></button>`:''}</div><div class="qtext">${esc(q.text)}</div></div>`).join('')}</div>`;
+}
+function renderPicker(){
+  const pa=document.getElementById('picker-area');
+  const pile=(S.books||[]).filter(b=>b.status==='pile');
+  if(pile.length<3){pa.innerHTML=`<div class="empty">Need at least 3 books in the pile.</div>`;return;}
+  if(!S.pickerSel||!S.pickerSel.every(id=>(S.books||[]).find(b=>b.id===id&&b.status==='pile'))){
+    pa.innerHTML=`<div style="text-align:center;padding:22px 0"><i class="ti ti-dice" style="font-size:38px;color:var(--accent)"></i><p style="margin:10px 0 6px;color:var(--muted);font-size:13px">Pick 3 random books and vote on your favourite</p>${isLeader?`<button class="btn" style="margin-top:12px" onclick="rollPicker()"><i class="ti ti-refresh"></i>Pick 3 random books</button>`:`<p style="font-size:12px;color:var(--muted);margin-top:12px;font-style:italic"><i class="ti ti-lock" style="font-size:13px;margin-right:4px"></i>Only the leader can generate the next pick — check back after they roll!</p>`}</div>`;return;
+  }
+  const picks=S.pickerSel.map(id=>(S.books||[]).find(b=>b.id===id));
+  const counts={};picks.forEach(b=>counts[b.id]=0);
+  Object.values(S.pickerVotes||{}).forEach(id=>{if(counts[id]!==undefined)counts[id]++;});
+  const total=Object.values(S.pickerVotes||{}).length;
+  const winner=picks.reduce((a,b)=>counts[a.id]>=counts[b.id]?a:b);
+  const anyV=picks.some(b=>b.vetoes&&b.vetoes.length>0);
+  pa.innerHTML=`${anyV?`<div style="background:var(--vbg);border:1.5px solid var(--vborder);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--vtext);margin-bottom:11px;font-weight:600"><i class="ti ti-alert-triangle" style="margin-right:5px"></i>A vetoed book is in this draw — reroll to skip it.</div>`:''}
+  <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">Tap a card to cast your vote</div>
+  <div class="rc-grid">${picks.map((b,i)=>{const v=counts[b.id];const pct=total?Math.round(v/total*100):0;const mv=(S.pickerVotes||{})['myvote']===b.id;const isV=b.vetoes&&b.vetoes.length>0;
+    return`<div class="rc ${mv?'voted':''} ${isV?'vetoed-pick':''}" onclick="memberVote(${b.id})"><div class="rc-num">${['①','②','③'][i]}</div><div class="rc-title">${esc(b.title)}</div><div class="rc-author">${esc(b.author)}</div>${isV?`<div class="veto-pill" style="margin-top:5px;display:inline-block"><i class="ti ti-ban" style="font-size:10px;margin-right:2px"></i>Vetoed</div>`:''}<div class="vbar-wrap" style="margin-top:8px"><div class="vbar" style="width:${pct}%"></div></div><div class="rc-votes">${v} vote${v!==1?'s':''} &middot; ${pct}%</div>${mv?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600"><i class="ti ti-check"></i> Your vote</div>`:''}</div>`;}).join('')}</div>
+  <div style="text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">
+    ${isLeader?`<button class="btn btn-outline" onclick="rollPicker()"><i class="ti ti-refresh"></i>Reroll${anyV?' (skip vetoed)':''}</button>`:''}
+    ${isLeader&&total>0?`<button class="btn btn-pink" onclick="pickWinner(${winner.id})"><i class="ti ti-crown"></i>Set as next read</button>`:''}
+  </div>
+  ${total>0?`<div style="text-align:center;margin-top:7px;font-size:11px;color:var(--muted)">${total} vote${total!==1?'s':''} cast</div>`:''}
+  ${isLeader?`<div style="margin-top:10px;text-align:center">
+    <button class="btn btn-sm btn-outline" onclick="openProxyVoteModal()" style="font-size:12px"><i class="ti ti-user-plus" style="margin-right:4px"></i>Add another member's vote</button>
+  </div>
+  ${Object.keys(S.pickerVotes||{}).filter(k=>k!=='myvote').length>0?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">Member votes added:</div><div style="display:flex;gap:5px;flex-wrap:wrap">${Object.entries(S.pickerVotes||{}).filter(([k])=>k!=='myvote').map(([name,bid])=>`<span style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px">${esc(name)} <i class="ti ti-arrow-right" style="font-size:10px;color:var(--muted)"></i> ${esc((picks.find(b=>b.id===bid)||{title:'?'}).title.split(' ').slice(0,3).join(' ')+'…')} <button onclick="removeProxyVote('${name}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1;display:flex;align-items:center"><i class="ti ti-x"></i></button></span>`).join('')}</div></div>`:''}`:''}\`;
+}
+function rollPicker(){if(!isLeader){toast('Only the leader can roll.');return;}const pile=(S.books||[]).filter(b=>b.status==='pile');const clean=pile.filter(b=>!b.vetoes||b.vetoes.length===0);const pool=clean.length>=3?clean:pile;S.pickerSel=[...pool].sort(()=>Math.random()-.5).slice(0,3).map(b=>b.id);S.pickerVotes={};ds();renderPicker();if(clean.length<pile.length&&clean.length>=3)toast('Vetoed books skipped!');}
+function pickerVote(id){if(!S.pickerVotes)S.pickerVotes={};S.pickerVotes['myvote']=id;ds();renderPicker();}
+function memberVote(id){
+  if(!S.pickerSel){return;}
+  if(!S.pickerVotes)S.pickerVotes={};
+  S.pickerVotes['myvote']=id;
+  ds();renderPicker();
+}
+function openProxyVoteModal(){
+  if(!S.pickerSel||S.pickerSel.length===0){toast('Roll the picker first.');return;}
+  const picks=S.pickerSel.map(id=>(S.books||[]).find(b=>b.id===id)).filter(Boolean);
+  const sel=document.getElementById('proxy-book');
+  if(sel) sel.innerHTML=picks.map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('');
+  const nameEl=document.getElementById('proxy-name');
+  if(nameEl)nameEl.value='';
+  document.getElementById('proxy-err').textContent='';
+  document.getElementById('proxy-vote-modal').classList.add('open');
+  setTimeout(()=>{if(nameEl)nameEl.focus();},50);
+}
+function submitProxyVote(){
+  const nameEl=document.getElementById('proxy-name');
+  const bookEl=document.getElementById('proxy-book');
+  const name=(nameEl?nameEl.value:'').trim();
+  const bid=parseInt(bookEl?bookEl.value:0);
+  if(!name){document.getElementById('proxy-err').textContent='Please enter a member name.';return;}
+  if(!S.pickerVotes)S.pickerVotes={};
+  if(S.pickerVotes[name]!==undefined){document.getElementById('proxy-err').textContent=name+' already has a vote — remove it first.';return;}
+  S.pickerVotes[name]=bid;
+  document.getElementById('proxy-vote-modal').classList.remove('open');
+  ds();renderPicker();toast(name+"'s vote added!");
+}
+function removeProxyVote(name){
+  if(S.pickerVotes)delete S.pickerVotes[name];
+  ds();renderPicker();toast('Vote removed.');
+}
+function pickWinner(id){if((S.books||[]).find(b=>b.status==='reading')){toast('Finish the current book first!');return;}(S.books||[]).find(b=>b.id===id).status='reading';S.pickerSel=null;S.pickerVotes={};ds();render();toast('Happy reading!');}
+let vetoTarget=null;
+function openVetoModal(id){vetoTarget=id;const b=(S.books||[]).find(b=>b.id===id);document.getElementById('veto-book-name').textContent='"'+b.title+'"';document.getElementById('veto-name-input').value='';document.getElementById('veto-err').textContent='';document.getElementById('veto-modal').classList.add('open');setTimeout(()=>document.getElementById('veto-name-input').focus(),50);}
+function closeVeto(){document.getElementById('veto-modal').classList.remove('open');vetoTarget=null;}
+function confirmVeto(){const name=document.getElementById('veto-name-input').value.trim();if(!name){document.getElementById('veto-err').textContent='Please enter your name.';return;}const b=(S.books||[]).find(b=>b.id===vetoTarget);if(!b){closeVeto();return;}const key='vetocount_'+YEAR+'_'+name;if(!S.ratings)S.ratings={};const used=S.ratings[key]||0;if(used>=3){document.getElementById('veto-err').textContent=`${name} has used all 3 vetoes for ${YEAR}.`;return;}if(!b.vetoes)b.vetoes=[];if(b.vetoes.includes(name)){document.getElementById('veto-err').textContent=`${name} already vetoed this book.`;return;}b.vetoes.push(name);S.ratings[key]=used+1;S.ratings['veto_my_'+b.id]=name;closeVeto();ds();render();toast(`Veto cast! ${3-used-1} remaining for ${name} this year.`);}
+function undoVeto(id){const b=(S.books||[]).find(b=>b.id===id);const name=(S.ratings||{})['veto_my_'+id];if(!name)return;b.vetoes=(b.vetoes||[]).filter(v=>v!==name);const key='vetocount_'+YEAR+'_'+name;S.ratings[key]=Math.max(0,(S.ratings[key]||1)-1);delete S.ratings['veto_my_'+id];ds();render();toast('Veto removed.');}
+let rateTarget=null,rateScore=0;
+function openRateModal(bookId,forMember){const b=(S.books||[]).find(b=>b.id===bookId);rateTarget=bookId;rateScore=0;document.getElementById('rate-book-name').textContent='"'+b.title+'"';document.getElementById('rate-modal-sub').textContent=forMember?'Submitting on behalf of another member.':'Share your rating and thoughts!';document.getElementById('rate-name-input').value='';document.getElementById('rate-name-input').placeholder=forMember?'Member name':'Your name';document.getElementById('rate-comment').value='';document.getElementById('rate-err').textContent='';renderModalStars(0);document.getElementById('rate-modal').classList.add('open');setTimeout(()=>document.getElementById('rate-name-input').focus(),50);}
+function closeRate(){document.getElementById('rate-modal').classList.remove('open');rateTarget=null;rateScore=0;}
+function renderModalStars(score){document.getElementById('rate-modal-stars').innerHTML=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="star-btn ${score>=n?'active':''}" onclick="setScore(${n})">${n}</button>`).join('');}
+function setScore(n){rateScore=n;renderModalStars(n);}
+function submitRating(){const name=document.getElementById('rate-name-input').value.trim();const comment=document.getElementById('rate-comment').value.trim();if(!name){document.getElementById('rate-err').textContent='Please enter your name.';return;}if(!rateScore){document.getElementById('rate-err').textContent='Please select a rating.';return;}const id=rateTarget;if(!S.ratings)S.ratings={};if(!S.ratings['members_'+id])S.ratings['members_'+id]={};S.ratings['members_'+id][name]={score:rateScore,comment};const allScores=Object.values(S.ratings['members_'+id]).map(d=>d.score);S.ratings[id]=allScores;const b=(S.books||[]).find(b=>b.id===id);if(b&&b.status==='read')b.groupRating=parseFloat((allScores.reduce((a,c)=>a+c,0)/allScores.length).toFixed(1));closeRate();ds();render();toast(`Rating submitted for ${name}!`);}
+function openChangeBook(){const pile=(S.books||[]).filter(b=>b.status==='pile');document.getElementById('change-book-select').innerHTML=pile.map(b=>`<option value="${b.id}">${esc(b.title)} — ${esc(b.author)}</option>`).join('');document.getElementById('change-book-modal').classList.add('open');}
+function confirmChangeBook(){const id=parseInt(document.getElementById('change-book-select').value);const curr=(S.books||[]).find(b=>b.status==='reading');if(curr)curr.status='read';(S.books||[]).find(b=>b.id===id).status='reading';document.getElementById('change-book-modal').classList.remove('open');ds();render();toast('Current book updated!');}
+function handleFileUpload(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(ev){const lines=ev.target.result.split('\n').map(l=>l.trim()).filter(l=>l.length>0&&!l.startsWith('#'));let added=0;if(!S.questions)S.questions=[];lines.forEach(line=>{const text=line.replace(/^[\d.\-\*]+\s*/,'').replace(/^["']/,'').replace(/["']$/,'').trim();if(text.length>3){S.questions.push({id:S.nextQId++,text});added++;}});ds();render();toast(`${added} question${added!==1?'s':''} uploaded!`);e.target.value='';};reader.readAsText(file);}
+let foundBook = null;
+async function searchBook(){
+  const title=document.getElementById('add-title').value.trim();
+  const author=document.getElementById('add-author').value.trim();
+  if(!title&&!author){toast('Enter a title and/or author to search.');return;}
+  const btn=document.getElementById('search-btn');
+  const status=document.getElementById('lookup-status');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Searching…';status.textContent='';
+  document.getElementById('lookup-result').style.display='none';
+  foundBook=null;
+  try{
+    const prompt=`Search your knowledge for a real published book matching this query:
+Title: ${title||'(not provided)'}
+Author: ${author||'(not provided)'}
+
+If you can identify a real book, respond with ONLY a JSON object in this exact format:
+{"found":true,"title":"Exact Book Title","author":"Full Author Name","genre":"Primary Genre / Secondary Genre","year":2024,"desc":"A 5-sentence spoiler-free description suitable for a book club."}
+
+If you cannot identify a real published book from this information, respond with:
+{"found":false}
+
+Do not include any text outside the JSON.`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,system:'You are a book database. You only respond with valid JSON. Never invent books.',messages:[{role:'user',content:prompt}]})});
+    const data=await resp.json();
+    const raw=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').trim();
+    const json=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(json.found){
+      foundBook=json;
+      document.getElementById('found-title').textContent=json.title;
+      document.getElementById('found-author').textContent='by '+json.author+(json.year?' ('+json.year+')':'');
+      document.getElementById('found-genre').textContent=json.genre||'';
+      document.getElementById('found-desc').textContent=json.desc||'';
+      document.getElementById('lookup-result').style.display='block';
+      status.textContent='';
+    } else {
+      status.textContent='No matching book found. Check the title or author and try again.';
+    }
+  }catch(e){
+    status.textContent='Search failed — try again.';
+    console.error(e);
+  }
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-search"></i>Search for book';
+}
+function clearSearch(){
+  foundBook=null;
+  document.getElementById('lookup-result').style.display='none';
+  document.getElementById('lookup-status').textContent='';
+  document.getElementById('add-title').value='';
+  document.getElementById('add-author').value='';
+}
+function addBook(){
+  if(!foundBook){toast('Search for a book first.');return;}
+  if(!foundBook.title||!foundBook.author){toast('Could not find a valid book — please search again.');return;}
+  if(!S.books)S.books=[];
+  const titleNorm=foundBook.title.toLowerCase().trim();
+  const duplicate=(S.books||[]).find(b=>b.title.toLowerCase().trim()===titleNorm);
+  if(duplicate){
+    const where=duplicate.status==='reading'?'currently being read':duplicate.status==='read'?'already finished':'already in the pile';
+    toast('"'+foundBook.title+'" is '+where+'!',true);
+    return;
+  }
+  S.books.push({id:S.nextId++,title:foundBook.title,author:foundBook.author,genre:foundBook.genre||'',desc:foundBook.desc||'',year:foundBook.year||new Date().getFullYear(),status:'pile',vetoes:[]});
+  clearSearch();
+  populateGenreFilter();ds();render();toast('"'+foundBook.title+'" added to the pile!');
+  foundBook=null;
+}
+function removeBook(id){S.books=(S.books||[]).filter(b=>b.id!==id);ds();render();toast('Book removed.');}
+function startReading(id){if((S.books||[]).find(b=>b.status==='reading')){toast('Finish the current book first!');return;}(S.books||[]).find(b=>b.id===id).status='reading';ds();render();toast('Happy reading!');}
+function markFinished(id){(S.books||[]).find(b=>b.id===id).status='read';ds();render();toast('Book marked as finished!');}
+function addQuestion(){const t=document.getElementById('new-q').value.trim();if(!t){toast('Please enter a question.');return;}if(!S.questions)S.questions=[];S.questions.push({id:S.nextQId++,text:t});document.getElementById('new-q').value='';ds();render();toast('Question added!');}
+function removeQ(id){S.questions=(S.questions||[]).filter(q=>q.id!==id);ds();render();}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,isErr=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isErr?' error':'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── UNHINGED TAB ──────────────────────────────────────────────────────────────
+const SASSY_MESSAGES = [
+  "bitch I said no 🙄",
+  "are you fucking kidding me right now?",
+  "what part of I'm tired don't you get?",
+  "just go away -_-",
+  "NO means NO, bestie",
+  "I literally cannot right now",
+  "the audacity... the sheer audacity",
+  "honey, the lever is ASLEEP",
+  "you need a hobby that isn't this",
+  "consider touching grass instead"
+];
+
+let sassyIdx = 0;
+let timerInterval = null;
+
+function getLeverState() {
+  const raw = localStorage.getItem('unhinged_state');
+  if (!raw) return { spins: 0, cooldownUntil: 0, annoyCount: 0 };
+  try { return JSON.parse(raw); } catch(e) { return { spins: 0, cooldownUntil: 0, annoyCount: 0 }; }
+}
+function saveLeverState(state) {
+  localStorage.setItem('unhinged_state', JSON.stringify(state));
+}
+
+function startTimerDisplay(until) {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const remaining = Math.max(0, until - Date.now());
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('lever-timer').textContent = '';
+      document.getElementById('lever-btn').disabled = false;
+      document.getElementById('lever-btn').style.opacity = '1';
+      document.getElementById('spin-count-display').textContent = '';
+      return;
+    }
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('lever-timer').textContent = `back in ${mins}m ${secs}s`;
+  }, 1000);
+}
+
+function updateSpinDisplay() {
+  const state = getLeverState();
+  const remaining = Math.max(0, state.cooldownUntil - Date.now());
+  const el = document.getElementById('spin-count-display');
+  if (remaining <= 0 && el) {
+    el.textContent = state.spins > 0 ? `${5 - state.spins} spin${5-state.spins !== 1 ? 's' : ''} left` : '';
+  }
+}
+
+function showLeverMessage(msg, color) {
+  const el = document.getElementById('lever-message');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--accent2)';
+  el.style.display = 'block';
+}
+
+async function pullLever() {
+  const genre = (document.getElementById('unhinged-genre') || {value:''}).value;
+  if (!genre) { showLeverMessage('pick a genre first, genius', 'var(--muted)'); return; }
+
+  const state = getLeverState();
+  const now = Date.now();
+
+  // Check cooldown
+  if (state.cooldownUntil > now) {
+    state.annoyCount = (state.annoyCount || 0) + 1;
+    if (state.annoyCount >= 10) {
+      // 3 hour punishment
+      state.cooldownUntil = now + 3 * 60 * 60 * 1000;
+      state.annoyCount = 0;
+      saveLeverState(state);
+      showLeverMessage("Are you cereal? This is why we can't have nice things.", 'var(--vtext)');
+      setTimeout(() => showLeverMessage("I warned you, dumb ho 💀", '#E24B4A'), 1800);
+      startTimerDisplay(state.cooldownUntil);
+      return;
+    }
+    saveLeverState(state);
+    const msg = SASSY_MESSAGES[sassyIdx % SASSY_MESSAGES.length];
+    sassyIdx++;
+    showLeverMessage(msg, 'var(--accent2)');
+    // Shake the button
+    const btn = document.getElementById('lever-btn');
+    if (btn) { btn.style.transform = 'translateX(-6px)'; setTimeout(() => { btn.style.transform = 'translateX(6px)'; setTimeout(() => { btn.style.transform = 'scale(1)'; }, 80); }, 80); }
+    return;
+  }
+
+  // Increment spin count
+  state.spins = (state.spins || 0) + 1;
+  state.annoyCount = 0;
+
+  if (state.spins >= 5) {
+    // Start 1 hour cooldown
+    state.cooldownUntil = now + 60 * 60 * 1000;
+    state.spins = 0;
+    saveLeverState(state);
+    const btn = document.getElementById('lever-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    document.getElementById('spin-count-display').textContent = '';
+    startTimerDisplay(state.cooldownUntil);
+    showLeverMessage("Bitch I'm tired — let me rest! 😤", '#E24B4A');
+    // Still do one last spin before resting
+  } else {
+    saveLeverState(state);
+    updateSpinDisplay();
+  }
+
+  // Get existing books to exclude
+  const existingTitles = (S.books || []).map(b => b.title.toLowerCase().trim());
+
+  // Animate lever
+  const btn = document.getElementById('lever-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Spinning…'; }
+
+  const resultsEl = document.getElementById('unhinged-results');
+  if (resultsEl) resultsEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-style:italic;font-size:13px"><span class="spinner" style="border-top-color:var(--accent);border-color:var(--border)"></span> Finding you something good…</div>`;
+
+  try {
+    const prompt = `You are a book recommendation engine. Recommend exactly 5 highly-rated books in the "${genre}" genre.
+
+Rules:
+- These books must be well-reviewed on sites like Barnes & Noble, Goodreads, Publishers Weekly, Kirkus Reviews, or Bookpage
+- Do NOT include any of these books already on the user's list: ${existingTitles.slice(0,30).join(', ')}
+- Each book must be a real, published, well-regarded title
+- Avoid Reddit, blog posts, or informal sources as your basis
+- Prioritize books with strong critical reception and reader ratings
+
+Respond ONLY with a JSON array of exactly 5 objects, no other text:
+[
+  {
+    "title": "Book Title",
+    "author": "Author Name",
+    "year": 2023,
+    "rating": "4.3/5 on Goodreads · Kirkus starred review",
+    "desc": "A 5-7 sentence spoiler-free description of this book suitable for a book club audience. Make it compelling and specific."
+  }
+]`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        system: 'You are a book recommendation engine. You only respond with valid JSON arrays. Never include text outside the JSON.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await resp.json();
+    const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+    const books = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    if (!Array.isArray(books) || books.length === 0) throw new Error('no books returned');
+
+    window._unhingedBooks = books;
+    if (resultsEl) {
+      const colors = ['#5B4FE8','#FF6B9D','#17B89A','#F5A623','#8B5CF6'];
+      resultsEl.innerHTML = books.map((b, i) => `
+        <div class="card" style="margin-bottom:12px;border-left:4px solid ${colors[i]}">
+          <div class="flex-b" style="margin-bottom:8px">
+            <div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);font-style:italic">${esc(b.title)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px">by ${esc(b.author)}${b.year ? ' · ' + b.year : ''}</div>
+              ${b.rating ? `<div style="font-size:11px;color:var(--teal);font-weight:600;margin-top:3px"><i class="ti ti-star" style="font-size:11px;margin-right:3px"></i>${esc(b.rating)}</div>` : ''}
+            </div>
+            <button class="btn btn-sm btn-teal" onclick="addUnhingedBook(${i})" style="flex-shrink:0"><i class="ti ti-plus"></i>Add to pile</button>
+          </div>
+          <div style="font-size:13px;color:var(--ink);line-height:1.7;border-left:3px solid var(--border);padding-left:9px">${esc(b.desc)}</div>
+        </div>`).join('');
+    }
+
+    const lever = getLeverState();
+    if (lever.cooldownUntil <= Date.now()) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-slot-machine" style="font-size:16px;margin-right:6px"></i>Pull the lever!'; }
+    } else {
+      if (btn) { btn.innerHTML = '<i class="ti ti-slot-machine" style="font-size:16px;margin-right:6px"></i>Pull the lever!'; }
+    }
+
+  } catch(e) {
+    if (resultsEl) resultsEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-style:italic;font-size:13px">Something went wrong — pull again?</div>`;
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-slot-machine" style="font-size:16px;margin-right:6px"></i>Pull the lever!'; }
+  }
+}
+
+function addUnhingedBook(idx) {
+  const books = window._unhingedBooks || [];
+  const b = books[idx];
+  if (!b) { toast('Book not found — pull again.', true); return; }
+  if (!S.books) S.books = [];
+  const dupe = S.books.find(x => x.title.toLowerCase().trim() === b.title.toLowerCase().trim());
+  if (dupe) {
+    const where = dupe.status === 'reading' ? 'currently being read' : dupe.status === 'read' ? 'already finished' : 'already in the pile';
+    toast('"' + b.title + '" is ' + where + '!', true);
+    return;
+  }
+  S.books.push({ id: S.nextId++, title: b.title, author: b.author, genre: b.genre || '', desc: b.desc || '', year: b.year || new Date().getFullYear(), status: 'pile', vetoes: [] });
+  populateGenreFilter(); ds(); render();
+  toast('"' + b.title + '" added to the pile!');
+}
+
+// Init lever state on tab open
+function initLeverState() {
+  const state = getLeverState();
+  const now = Date.now();
+  if (state.cooldownUntil > now) {
+    const btn = document.getElementById('lever-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    startTimerDisplay(state.cooldownUntil);
+    if (state.annoyCount >= 10) {
+      showLeverMessage("I warned you, dumb ho 💀", '#E24B4A');
+    } else {
+      showLeverMessage("Bitch I'm tired — let me rest! 😤", '#E24B4A');
+    }
+  } else {
+    updateSpinDisplay();
+  }
+}
+
+</script>
+
+<div id="proxy-vote-modal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-user-plus" style="margin-right:5px;color:var(--accent)"></i>Add a member's vote</div>
+    <div class="modal-sub">Submit a vote on behalf of someone in the club.</div>
+    <label>Member name</label>
+    <input type="text" id="proxy-name" placeholder="e.g. Rachel"/>
+    <label>Vote for</label>
+    <select id="proxy-book" style="margin-bottom:12px"></select>
+    <div id="proxy-err" class="err" style="margin-bottom:8px"></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-teal" onclick="submitProxyVote()"><i class="ti ti-check"></i>Add vote</button>
+      <button class="btn btn-sm btn-outline" onclick="document.getElementById('proxy-vote-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
