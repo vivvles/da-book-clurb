@@ -689,76 +689,83 @@ function renderQuestions(){
 }
 
 function renderPicker(){
-  const pa=document.getElementById('picker-area');
-  const pile=(S.books||[]).filter(b=>b.status==='pile');
-  if(pile.length<3){pa.innerHTML=`<div class="empty">Need at least 3 books in the pile.</div>`;return;}
-  if(!S.pickerSel||!S.pickerSel.every(id=>(S.books||[]).find(b=>b.id===id&&b.status==='pile'))){
-    pa.innerHTML=`<div style="text-align:center;padding:22px 0">
-      <div style="font-size:38px;color:var(--accent)">🎲</div>
-      <p style="margin:10px 0 6px;color:var(--muted);font-size:13px">Pick 3 random books and vote on your favourite</p>
-      ${isLeader?`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">
-        <button class="btn" onclick="rollPicker()">🔄 Pick 3 random books</button>
-      </div>`
-      :`<p style="font-size:12px;color:var(--muted);margin-top:12px;font-style:italic">🔒 Only the leader can generate the next pick — check back after they roll!</p>`}
-    </div>`;
+  var pa=document.getElementById('picker-area');
+  var pile=(S.books||[]).filter(function(b){return b.status==='pile';});
+  if(pile.length<3){pa.innerHTML='<div class="empty">Need at least 3 books in the pile.</div>';return;}
+  if(!S.pickerSel||!S.pickerSel.every(function(id){return (S.books||[]).find(function(b){return b.id===id&&b.status==='pile';});})){
+    pa.innerHTML='<div style="text-align:center;padding:22px 0">'
+      +'<div style="font-size:38px;color:var(--accent)">&#x1F3B2;</div>'
+      +'<p style="margin:10px 0 6px;color:var(--muted);font-size:13px">Pick 3 random books and vote on your favourite</p>'
+      +(isLeader
+        ?'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn" onclick="rollPicker()">&#x1F504; Pick 3 random books</button></div>'
+        :'<p style="font-size:12px;color:var(--muted);margin-top:12px;font-style:italic">&#x1F512; Only the leader can generate the next pick — check back after they roll!</p>'
+      )+'</div>';
+    renderDictatorSection(pa);
     return;
   }
-  const picks=S.pickerSel.map(id=>(S.books||[]).find(b=>b.id===id));
-  const counts={};picks.forEach(b=>counts[b.id]=0);
-  Object.values(S.pickerVotes||{}).forEach(id=>{if(counts[id]!==undefined)counts[id]++;});
-  const total=Object.values(S.pickerVotes||{}).length;
-  const winner=picks.reduce((a,b)=>counts[a.id]>=counts[b.id]?a:b);
-  const anyV=picks.some(b=>b.vetoes&&b.vetoes.length>0);
-  pa.innerHTML=`
-    ${anyV?`<div style="background:var(--vbg);border:1.5px solid var(--vborder);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--vtext);margin-bottom:11px;font-weight:600">⚠️ A vetoed book is in this draw — reroll to skip it.</div>`:''}
-    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">Tap a card to cast your vote</div>
-    <div class="rc-grid">
-      ${picks.map((b,i)=>{
-        const v=counts[b.id];
-        const pct=total?Math.round(v/total*100):0;
-        const mv=(S.pickerVotes||{})['myvote']===b.id;
-        const isV=b.vetoes&&b.vetoes.length>0;
-        return`<div class="rc ${mv?'voted':''} ${isV?'vetoed-pick':''}" onclick="memberVote(${b.id})">
-          <div class="rc-num">${['①','②','③'][i]}</div>
-          <div class="rc-title">${esc(b.title)}</div>
-          <div class="rc-author">${esc(b.author)}</div>
-          ${isV?`<div class="veto-pill" style="margin-top:5px">🚫 Vetoed</div>`:''}
-          <div class="vbar-wrap" style="margin-top:8px"><div class="vbar" style="width:${pct}%"></div></div>
-          <div class="rc-votes">${v} vote${v!==1?'s':''} · ${pct}%</div>
-          ${mv?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✓ Your vote</div>`:''}
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">
-      ${isLeader?`<button class="btn btn-outline" onclick="rollPicker()">🔄 Reroll${anyV?' (skip vetoed)':''}</button>`:''}
-      ${isLeader?`<button style="background:var(--bg2);color:var(--muted);border:1.5px solid var(--border);padding:6px 14px;border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer" onclick="clearPicker()">&oslash; Clear picks</button>`:''}
-      ${isLeader&&total>0?`<button class="btn btn-pink" onclick="pickWinner(${winner.id})">👑 Set as next read</button>`:''}
-    </div>
-    ${total>0?`<div style="text-align:center;margin-top:7px;font-size:11px;color:var(--muted)">${total} vote${total!==1?'s':''} cast</div>`:''}
-    ${isLeader?`<div style="margin-top:10px;text-align:center">
-      <button class="btn btn-sm btn-outline" onclick="openProxyVoteModal()" style="font-size:12px">👥 Add another member's vote</button>
-    </div>
-    <div style="margin-top:20px;border-top:2px dashed var(--vborder);padding-top:16px">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;font-style:italic;color:var(--vtext);margin-bottom:4px">👑 I AM THE MOTHERFUCKING LEADER!</div>
-      <div style="font-size:10px;color:var(--muted);font-style:italic;margin-bottom:10px">WOW — someone's a bit of a dictator in this smol humble book clurb, aye?</div>
-      <select id="dictator-select" style="width:100%;padding:8px 12px;border:1.5px solid var(--vborder);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--vbg);color:var(--ink);margin-bottom:8px"></select>
-      <button class="btn btn-sm btn-veto" onclick="openDictatorConfirm()" style="font-size:12px">⚡ Make this the next read</button>
-    </div>`:''}
-    ${Object.keys(S.pickerVotes||{}).filter(k=>k!=='myvote').length>0?`
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">Member votes added:</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
-          ${Object.entries(S.pickerVotes||{}).filter(([k])=>k!=='myvote').map(([name,bid])=>`
-            <span style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px">
-              ${esc(name)} → ${esc((picks.find(b=>b.id===bid)||{title:'?'}).title.split(' ').slice(0,3).join(' ')+'…')}
-              <button onclick="removeProxyVote('${name}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">✕</button>
-            </span>`).join('')}
-        </div>
-      </div>`:''}`:''
-  }`;
-  // Populate dictator select with pile books
-  var ds2=document.getElementById('dictator-select');
-  if(ds2){ds2.innerHTML=(S.books||[]).filter(function(b){return b.status==='pile';}).map(function(b){return '<option value="'+b.id+'">'+esc(b.title)+' — '+esc(b.author)+'</option>';}).join('');}
+  var picks=S.pickerSel.map(function(id){return (S.books||[]).find(function(b){return b.id===id;});});
+  var counts={};picks.forEach(function(b){counts[b.id]=0;});
+  Object.values(S.pickerVotes||{}).forEach(function(id){if(counts[id]!==undefined)counts[id]++;});
+  var total=Object.values(S.pickerVotes||{}).length;
+  var winner=picks.reduce(function(a,b){return counts[a.id]>=counts[b.id]?a:b;});
+  var anyV=picks.some(function(b){return b.vetoes&&b.vetoes.length>0;});
+  var html='';
+  if(anyV)html+='<div style="background:var(--vbg);border:1.5px solid var(--vborder);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--vtext);margin-bottom:11px;font-weight:600">&#x26A0;&#xFE0F; A vetoed book is in this draw — reroll to skip it.</div>';
+  html+='<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">Tap a card to cast your vote</div>';
+  html+='<div class="rc-grid">';
+  var nums=['①','②','③'];
+  picks.forEach(function(b,i){
+    var v=counts[b.id];
+    var pct=total?Math.round(v/total*100):0;
+    var mv=(S.pickerVotes||{})['myvote']===b.id;
+    var isV=b.vetoes&&b.vetoes.length>0;
+    html+='<div class="rc '+(mv?'voted ':''+(isV?'vetoed-pick':''))+'" onclick="memberVote('+b.id+')">'
+      +'<div class="rc-num">'+nums[i]+'</div>'
+      +'<div class="rc-title">'+esc(b.title)+'</div>'
+      +'<div class="rc-author">'+esc(b.author)+'</div>'
+      +(isV?'<div class="veto-pill" style="margin-top:5px">&#x1F6AB; Vetoed</div>':'')
+      +'<div class="vbar-wrap" style="margin-top:8px"><div class="vbar" style="width:'+pct+'%"></div></div>'
+      +'<div class="rc-votes">'+v+' vote'+(v!==1?'s':'')+' · '+pct+'%</div>'
+      +(mv?'<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✓ Your vote</div>':'')
+      +'</div>';
+  });
+  html+='</div>';
+  html+='<div style="text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">';
+  if(isLeader){
+    html+='<button class="btn btn-outline" onclick="rollPicker()">&#x1F504; Reroll'+(anyV?' (skip vetoed)':'')+'</button>';
+    html+='<button style="background:var(--bg2);color:var(--muted);border:1.5px solid var(--border);padding:6px 14px;border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer" onclick="clearPicker()">&oslash; Clear picks</button>';
+    if(total>0)html+='<button class="btn btn-pink" onclick="pickWinner('+winner.id+')">&#x1F451; Set as next read</button>';
+  }
+  html+='</div>';
+  if(total>0)html+='<div style="text-align:center;margin-top:7px;font-size:11px;color:var(--muted)">'+total+' vote'+(total!==1?'s':'')+' cast</div>';
+  if(isLeader){
+    html+='<div style="margin-top:10px;text-align:center"><button class="btn btn-sm btn-outline" onclick="openProxyVoteModal()" style="font-size:12px">&#x1F465; Add another member's vote</button></div>';
+    var proxyKeys=Object.keys(S.pickerVotes||{}).filter(function(k){return k!=='myvote';});
+    if(proxyKeys.length>0){
+      html+='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">Member votes added:</div><div style="display:flex;gap:5px;flex-wrap:wrap">';
+      proxyKeys.forEach(function(name){
+        var bid=(S.pickerVotes||{})[name];
+        var bk=picks.find(function(b){return b.id===bid;})||{title:'?'};
+        html+='<span style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px">'+esc(name)+' → '+esc(bk.title.split(' ').slice(0,3).join(' ')+'…')+'<button onclick="removeProxyVote(''+name+'')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">✕</button></span>';
+      });
+      html+='</div></div>';
+    }
+  }
+  pa.innerHTML=html;
+  renderDictatorSection(pa);
+}
+
+function renderDictatorSection(pa){
+  if(!isLeader)return;
+  var div=document.createElement('div');
+  div.style.cssText='margin-top:20px;border-top:2px dashed var(--vborder);padding-top:16px';
+  div.innerHTML='<div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;font-style:italic;color:var(--vtext);margin-bottom:4px">&#x1F451; I AM THE MOTHERFUCKING LEADER!</div>'
+    +'<div style="font-size:10px;color:var(--muted);font-style:italic;margin-bottom:10px">WOW — someone's a bit of a dictator in this smol humble book clurb, aye?</div>'
+    +'<select id="dictator-select" style="width:100%;padding:8px 12px;border:1.5px solid var(--vborder);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--vbg);color:var(--ink);margin-bottom:8px">'
+    +(S.books||[]).filter(function(b){return b.status==='pile';}).map(function(b){return '<option value="'+b.id+'">'+esc(b.title)+' — '+esc(b.author)+'</option>';}).join('')
+    +'</select>'
+    +'<button class="btn btn-sm btn-veto" onclick="openDictatorConfirm()" style="font-size:12px">&#x26A1; Make this the next read</button>';
+  pa.appendChild(div);
 }
 
 function clearPicker(){
